@@ -33,7 +33,10 @@ export default function App() {
     localStorage.setItem("fixedIncomes", JSON.stringify(fixedIncomes));
   }, [customExpenses, fixedExpenses, fixedIncomes]);
 
-  const allExpenses = [...fixedExpenses, ...customExpenses];
+  const allExpenses = [
+    ...fixedExpenses.map((e) => ({ ...e, type: "fixed" })),
+    ...customExpenses.map((e) => ({ ...e, type: "custom" })),
+  ];
 
   const handleCheckboxExpense = (name) => {
     setSelectedExpenses((prev) =>
@@ -49,20 +52,32 @@ export default function App() {
 
   const handleAddCustomExpense = () => {
     if (!newExpenseName || isNaN(newExpenseAmount)) return;
-    setCustomExpenses([...customExpenses, { name: newExpenseName, amount: parseFloat(newExpenseAmount) }]);
-    setNewExpenseName(""); setNewExpenseAmount("");
+    setCustomExpenses([
+      ...customExpenses,
+      { name: newExpenseName, amount: parseFloat(newExpenseAmount) },
+    ]);
+    setNewExpenseName("");
+    setNewExpenseAmount("");
   };
 
   const handleAddFixedExpense = () => {
     if (!newFixedName || isNaN(newFixedAmount)) return;
-    setFixedExpenses([...fixedExpenses, { name: newFixedName, amount: parseFloat(newFixedAmount) }]);
-    setNewFixedName(""); setNewFixedAmount("");
+    setFixedExpenses([
+      ...fixedExpenses,
+      { name: newFixedName, amount: parseFloat(newFixedAmount) },
+    ]);
+    setNewFixedName("");
+    setNewFixedAmount("");
   };
 
   const handleAddFixedIncome = () => {
     if (!newFixedIncomeName || isNaN(newFixedIncomeAmount)) return;
-    setFixedIncomes([...fixedIncomes, { name: newFixedIncomeName, amount: parseFloat(newFixedIncomeAmount) }]);
-    setNewFixedIncomeName(""); setNewFixedIncomeAmount("");
+    setFixedIncomes([
+      ...fixedIncomes,
+      { name: newFixedIncomeName, amount: parseFloat(newFixedIncomeAmount) },
+    ]);
+    setNewFixedIncomeName("");
+    setNewFixedIncomeAmount("");
   };
 
   const totalExpenses = selectedExpenses.reduce((sum, name) => {
@@ -85,6 +100,14 @@ export default function App() {
   const extraDays = daysLeft % 7;
   const extraBudget = ((remaining / daysLeft) * extraDays).toFixed(2);
 
+  const handleDeleteExpense = (expense) => {
+    if (expense.type === "custom") {
+      setCustomExpenses(customExpenses.filter((c) => c.name !== expense.name));
+    } else if (expense.type === "fixed") {
+      setFixedExpenses(fixedExpenses.filter((f) => f.name !== expense.name));
+    }
+  };
+
   return (
     <div style={{ maxWidth: "600px", margin: "auto", padding: "2rem", fontFamily: "Arial" }}>
       <h1>Budget Planner</h1>
@@ -106,34 +129,4 @@ export default function App() {
         </div>
       ))}
       <input type="text" placeholder="Naam" value={newFixedIncomeName} onChange={(e) => setNewFixedIncomeName(e.target.value)} />
-      <input type="number" placeholder="Bedrag" value={newFixedIncomeAmount} onChange={(e) => setNewFixedIncomeAmount(e.target.value)} />
-      <button onClick={handleAddFixedIncome}>Toevoegen</button>
-
-      <h2>Uitgaven</h2>
-      {allExpenses.map((e) => (
-        <div key={e.name}>
-          <input type="checkbox" checked={selectedExpenses.includes(e.name)} onChange={() => handleCheckboxExpense(e.name)} />
-          {e.name} (€{e.amount})
-          <button onClick={() => setCustomExpenses(customExpenses.filter(c => c.name !== e.name))}>Verwijder</button>
-        </div>
-      ))}
-      <h3>Nieuwe uitgave toevoegen</h3>
-      <input type="text" placeholder="Naam" value={newExpenseName} onChange={(e) => setNewExpenseName(e.target.value)} />
-      <input type="number" placeholder="Bedrag" value={newExpenseAmount} onChange={(e) => setNewExpenseAmount(e.target.value)} />
-      <button onClick={handleAddCustomExpense}>Toevoegen</button>
-
-      <h3>Nieuwe vaste kost toevoegen</h3>
-      <input type="text" placeholder="Naam" value={newFixedName} onChange={(e) => setNewFixedName(e.target.value)} />
-      <input type="number" placeholder="Bedrag" value={newFixedAmount} onChange={(e) => setNewFixedAmount(e.target.value)} />
-      <button onClick={handleAddFixedExpense}>Toevoegen</button>
-
-      <hr />
-      <p><strong>Totaal beschikbaar:</strong> €{totalAvailable}</p>
-      <p><strong>Totale uitgaven:</strong> €{totalExpenses}</p>
-      <p><strong>Overschot:</strong> €{remaining}</p>
-      <p><strong>Dagen resterend in maand:</strong> {daysLeft}</p>
-      <p><strong>Wekelijks budget:</strong> €{weeklyBudget}</p>
-      {extraDays > 0 && <p><strong>Extra {extraDays} dagen budget:</strong> €{extraBudget}</p>}
-    </div>
-  );
-}
+      <input type="number" placeholder="Bedrag" value
