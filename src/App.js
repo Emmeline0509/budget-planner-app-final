@@ -10,22 +10,24 @@ export default function App() {
   const [fixedExpenses, setFixedExpenses] = useState([]);
   const [fixedIncomes, setFixedIncomes] = useState([]);
   const [currentDate, setCurrentDate] = useState(format(new Date(), "yyyy-MM-dd"));
+
   const [newExpenseName, setNewExpenseName] = useState("");
   const [newExpenseAmount, setNewExpenseAmount] = useState("");
   const [newFixedName, setNewFixedName] = useState("");
   const [newFixedAmount, setNewFixedAmount] = useState("");
-  const [newFixedIncomeName, setNewFixedIncomeName] = useState("");
-  const [newFixedIncomeAmount, setNewFixedIncomeAmount] = useState("");
+  const [newIncomeName, setNewIncomeName] = useState("");
+  const [newIncomeAmount, setNewIncomeAmount] = useState("");
 
   useEffect(() => {
     const customStored = localStorage.getItem("customExpenses");
     const fixedStored = localStorage.getItem("fixedExpenses");
     const incomeStored = localStorage.getItem("fixedIncomes");
-    const selectedIncomeStored = localStorage.getItem("selectedIncomes");
+    const incomeSelected = localStorage.getItem("selectedIncomes");
+
     if (customStored) setCustomExpenses(JSON.parse(customStored));
     if (fixedStored) setFixedExpenses(JSON.parse(fixedStored));
     if (incomeStored) setFixedIncomes(JSON.parse(incomeStored));
-    if (selectedIncomeStored) setSelectedIncomes(JSON.parse(selectedIncomeStored));
+    if (incomeSelected) setSelectedIncomes(JSON.parse(incomeSelected));
   }, []);
 
   useEffect(() => {
@@ -45,6 +47,9 @@ export default function App() {
   }, [selectedIncomes]);
 
   const allExpenses = [...fixedExpenses, ...customExpenses];
+  const totalFixedIncome = fixedIncomes
+    .filter((i) => selectedIncomes.includes(i.name))
+    .reduce((sum, inc) => sum + inc.amount, 0);
 
   const handleCheckboxChange = (name) => {
     setSelectedExpenses((prev) =>
@@ -60,25 +65,26 @@ export default function App() {
 
   const handleAddExpense = () => {
     if (!newExpenseName || isNaN(parseFloat(newExpenseAmount))) return;
-    setCustomExpenses((prev) => [...prev, { name: newExpenseName, amount: parseFloat(newExpenseAmount) }]);
+    const newEntry = { name: newExpenseName, amount: parseFloat(newExpenseAmount) };
+    setCustomExpenses((prev) => [...prev, newEntry]);
     setNewExpenseName("");
     setNewExpenseAmount("");
   };
 
   const handleAddFixed = () => {
     if (!newFixedName || isNaN(parseFloat(newFixedAmount))) return;
-    setFixedExpenses((prev) => [...prev, { name: newFixedName, amount: parseFloat(newFixedAmount) }]);
+    const newEntry = { name: newFixedName, amount: parseFloat(newFixedAmount) };
+    setFixedExpenses((prev) => [...prev, newEntry]);
     setNewFixedName("");
     setNewFixedAmount("");
   };
 
-  const handleAddFixedIncome = () => {
-    if (!newFixedIncomeName || isNaN(parseFloat(newFixedIncomeAmount))) return;
-    const newEntry = { name: newFixedIncomeName, amount: parseFloat(newFixedIncomeAmount) };
+  const handleAddIncome = () => {
+    if (!newIncomeName || isNaN(parseFloat(newIncomeAmount))) return;
+    const newEntry = { name: newIncomeName, amount: parseFloat(newIncomeAmount) };
     setFixedIncomes((prev) => [...prev, newEntry]);
-    setSelectedIncomes((prev) => [...prev, newEntry.name]); // automatisch aanvinken bij toevoegen
-    setNewFixedIncomeName("");
-    setNewFixedIncomeAmount("");
+    setNewIncomeName("");
+    setNewIncomeAmount("");
   };
 
   const handleDeleteExpense = (name) => {
@@ -101,17 +107,11 @@ export default function App() {
     return sum + (exp ? exp.amount : 0);
   }, 0);
 
-  const selectedIncomeTotal = selectedIncomes.reduce((sum, name) => {
-    const inc = fixedIncomes.find((i) => i.name === name);
-    return sum + (inc ? inc.amount : 0);
-  }, 0);
-
-  const totalAvailable = balance + extraIncome + selectedIncomeTotal;
+  const totalAvailable = balance + extraIncome + totalFixedIncome;
   const remaining = totalAvailable - selectedTotal;
   const today = new Date(currentDate);
   const end = endOfMonth(today);
   const daysLeft = Math.max(differenceInDays(end, today) + 1, 0);
-
   const fullWeeks = Math.floor(daysLeft / 7);
   const extraDays = daysLeft % 7;
   const weeklyBudget = fullWeeks > 0 ? (remaining / daysLeft) * 7 : 0;
@@ -133,28 +133,34 @@ export default function App() {
       <h2>Vaste inkomens</h2>
       {fixedIncomes.map((inc) => (
         <div key={inc.name}>
-          <input
-            type="checkbox"
-            checked={selectedIncomes.includes(inc.name)}
-            onChange={() => handleIncomeCheckboxChange(inc.name)}
-          />
-          {inc.name} (€{inc.amount})
+          <label>
+            <input
+              type="checkbox"
+              checked={selectedIncomes.includes(inc.name)}
+              onChange={() => handleIncomeCheckboxChange(inc.name)}
+            />
+            {inc.name} (€{inc.amount})
+          </label>
           <button onClick={() => handleDeleteFixedIncome(inc.name)}>Verwijder</button>
         </div>
       ))}
-      <input type="text" placeholder="Naam" value={newFixedIncomeName} onChange={(e) => setNewFixedIncomeName(e.target.value)} />
-      <input type="number" placeholder="Bedrag" value={newFixedIncomeAmount} onChange={(e) => setNewFixedIncomeAmount(e.target.value)} />
-      <button onClick={handleAddFixedIncome}>Toevoegen</button>
+
+      <h3>Nieuwe vaste inkomen toevoegen</h3>
+      <input type="text" placeholder="Naam" value={newIncomeName} onChange={(e) => setNewIncomeName(e.target.value)} />
+      <input type="number" placeholder="Bedrag" value={newIncomeAmount} onChange={(e) => setNewIncomeAmount(e.target.value)} />
+      <button onClick={handleAddIncome}>Toevoegen</button>
 
       <h2>Uitgaven</h2>
       {allExpenses.map((exp) => (
         <div key={exp.name}>
-          <input
-            type="checkbox"
-            checked={selectedExpenses.includes(exp.name)}
-            onChange={() => handleCheckboxChange(exp.name)}
-          />
-          {exp.name} (€{exp.amount})
+          <label>
+            <input
+              type="checkbox"
+              checked={selectedExpenses.includes(exp.name)}
+              onChange={() => handleCheckboxChange(exp.name)}
+            />
+            {exp.name} (€{exp.amount})
+          </label>
           {customExpenses.some((e) => e.name === exp.name) && (
             <button onClick={() => handleDeleteExpense(exp.name)}>Verwijder</button>
           )}
@@ -174,13 +180,15 @@ export default function App() {
       <input type="number" placeholder="Bedrag" value={newFixedAmount} onChange={(e) => setNewFixedAmount(e.target.value)} />
       <button onClick={handleAddFixed}>Toevoegen</button>
 
-      <hr/>
+      <hr />
       <p><strong>Totaal beschikbaar:</strong> €{totalAvailable}</p>
       <p><strong>Totaal geselecteerde uitgaven:</strong> €{selectedTotal}</p>
       <p><strong>Overschot:</strong> €{remaining}</p>
       <p><strong>Dagen resterend in maand:</strong> {daysLeft}</p>
       <p><strong>Wekelijks budget:</strong> €{weeklyBudget.toFixed(2)}</p>
-      {extraDays > 0 && <p><strong>Extra {extraDays} dagen budget:</strong> €{extraBudget.toFixed(2)}</p>}
+      {extraDays > 0 && (
+        <p><strong>Extra {extraDays} dagen budget:</strong> €{extraBudget.toFixed(2)}</p>
+      )}
     </div>
   );
 }
