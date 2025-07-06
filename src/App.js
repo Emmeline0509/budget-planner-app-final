@@ -5,6 +5,7 @@ export default function App() {
   const [balance, setBalance] = useState(0);
   const [extraIncome, setExtraIncome] = useState(0);
   const [selectedExpenses, setSelectedExpenses] = useState([]);
+  const [selectedIncomes, setSelectedIncomes] = useState([]);
   const [customExpenses, setCustomExpenses] = useState([]);
   const [fixedExpenses, setFixedExpenses] = useState([]);
   const [fixedIncomes, setFixedIncomes] = useState([]);
@@ -20,30 +21,11 @@ export default function App() {
     const customStored = localStorage.getItem("customExpenses");
     const fixedStored = localStorage.getItem("fixedExpenses");
     const incomeStored = localStorage.getItem("fixedIncomes");
-
-    if (customStored) {
-      try {
-        setCustomExpenses(JSON.parse(customStored));
-      } catch (e) {
-        console.error("Fout bij laden van customExpenses:", e);
-      }
-    }
-
-    if (fixedStored) {
-      try {
-        setFixedExpenses(JSON.parse(fixedStored));
-      } catch (e) {
-        console.error("Fout bij laden van fixedExpenses:", e);
-      }
-    }
-
-    if (incomeStored) {
-      try {
-        setFixedIncomes(JSON.parse(incomeStored));
-      } catch (e) {
-        console.error("Fout bij laden van fixedIncomes:", e);
-      }
-    }
+    const selectedIncomeStored = localStorage.getItem("selectedIncomes");
+    if (customStored) setCustomExpenses(JSON.parse(customStored));
+    if (fixedStored) setFixedExpenses(JSON.parse(fixedStored));
+    if (incomeStored) setFixedIncomes(JSON.parse(incomeStored));
+    if (selectedIncomeStored) setSelectedIncomes(JSON.parse(selectedIncomeStored));
   }, []);
 
   useEffect(() => {
@@ -58,8 +40,11 @@ export default function App() {
     localStorage.setItem("fixedIncomes", JSON.stringify(fixedIncomes));
   }, [fixedIncomes]);
 
+  useEffect(() => {
+    localStorage.setItem("selectedIncomes", JSON.stringify(selectedIncomes));
+  }, [selectedIncomes]);
+
   const allExpenses = [...fixedExpenses, ...customExpenses];
-  const totalFixedIncome = fixedIncomes.reduce((sum, inc) => sum + inc.amount, 0);
 
   const handleCheckboxChange = (name) => {
     setSelectedExpenses((prev) =>
@@ -67,26 +52,29 @@ export default function App() {
     );
   };
 
+  const handleIncomeCheckboxChange = (name) => {
+    setSelectedIncomes((prev) =>
+      prev.includes(name) ? prev.filter((e) => e !== name) : [...prev, name]
+    );
+  };
+
   const handleAddExpense = () => {
     if (!newExpenseName || isNaN(parseFloat(newExpenseAmount))) return;
-    const newEntry = { name: newExpenseName, amount: parseFloat(newExpenseAmount) };
-    setCustomExpenses((prev) => [...prev, newEntry]);
+    setCustomExpenses((prev) => [...prev, { name: newExpenseName, amount: parseFloat(newExpenseAmount) }]);
     setNewExpenseName("");
     setNewExpenseAmount("");
   };
 
   const handleAddFixed = () => {
     if (!newFixedName || isNaN(parseFloat(newFixedAmount))) return;
-    const newEntry = { name: newFixedName, amount: parseFloat(newFixedAmount) };
-    setFixedExpenses((prev) => [...prev, newEntry]);
+    setFixedExpenses((prev) => [...prev, { name: newFixedName, amount: parseFloat(newFixedAmount) }]);
     setNewFixedName("");
     setNewFixedAmount("");
   };
 
   const handleAddFixedIncome = () => {
     if (!newFixedIncomeName || isNaN(parseFloat(newFixedIncomeAmount))) return;
-    const newEntry = { name: newFixedIncomeName, amount: parseFloat(newFixedIncomeAmount) };
-    setFixedIncomes((prev) => [...prev, newEntry]);
+    setFixedIncomes((prev) => [...prev, { name: newFixedIncomeName, amount: parseFloat(newFixedIncomeAmount) }]);
     setNewFixedIncomeName("");
     setNewFixedIncomeAmount("");
   };
@@ -103,6 +91,7 @@ export default function App() {
 
   const handleDeleteFixedIncome = (name) => {
     setFixedIncomes((prev) => prev.filter((e) => e.name !== name));
+    setSelectedIncomes((prev) => prev.filter((e) => e !== name));
   };
 
   const selectedTotal = selectedExpenses.reduce((sum, name) => {
@@ -110,7 +99,12 @@ export default function App() {
     return sum + (exp ? exp.amount : 0);
   }, 0);
 
-  const totalAvailable = balance + extraIncome + totalFixedIncome;
+  const selectedIncomeTotal = selectedIncomes.reduce((sum, name) => {
+    const inc = fixedIncomes.find((i) => i.name === name);
+    return sum + (inc ? inc.amount : 0);
+  }, 0);
+
+  const totalAvailable = balance + extraIncome + selectedIncomeTotal;
   const remaining = totalAvailable - selectedTotal;
   const today = new Date(currentDate);
   const end = endOfMonth(today);
@@ -137,11 +131,15 @@ export default function App() {
       <h2>Vaste inkomens</h2>
       {fixedIncomes.map((inc) => (
         <div key={inc.name}>
+          <input
+            type="checkbox"
+            checked={selectedIncomes.includes(inc.name)}
+            onChange={() => handleIncomeCheckboxChange(inc.name)}
+          />
           {inc.name} (€{inc.amount})
           <button onClick={() => handleDeleteFixedIncome(inc.name)}>Verwijder</button>
         </div>
       ))}
-
       <input type="text" placeholder="Naam" value={newFixedIncomeName} onChange={(e) => setNewFixedIncomeName(e.target.value)} />
       <input type="number" placeholder="Bedrag" value={newFixedIncomeAmount} onChange={(e) => setNewFixedIncomeAmount(e.target.value)} />
       <button onClick={handleAddFixedIncome}>Toevoegen</button>
@@ -175,7 +173,7 @@ export default function App() {
       <button onClick={handleAddFixed}>Toevoegen</button>
 
       <hr/>
-      <p><strong>Totaal beschikbaar (rekening + extra + vaste inkomens):</strong> €{totalAvailable}</p>
+      <p><strong>Totaal beschikbaar:</strong> €{totalAvailable}</p>
       <p><strong>Totaal geselecteerde uitgaven:</strong> €{selectedTotal}</p>
       <p><strong>Overschot:</strong> €{remaining}</p>
       <p><strong>Dagen resterend in maand:</strong> {daysLeft}</p>
