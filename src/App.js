@@ -74,7 +74,9 @@ export default function App() {
 
   const handleAddFixedIncome = () => {
     if (!newFixedIncomeName || isNaN(parseFloat(newFixedIncomeAmount))) return;
-    setFixedIncomes((prev) => [...prev, { name: newFixedIncomeName, amount: parseFloat(newFixedIncomeAmount) }]);
+    const newEntry = { name: newFixedIncomeName, amount: parseFloat(newFixedIncomeAmount) };
+    setFixedIncomes((prev) => [...prev, newEntry]);
+    setSelectedIncomes((prev) => [...prev, newEntry.name]); // automatisch aanvinken bij toevoegen
     setNewFixedIncomeName("");
     setNewFixedIncomeAmount("");
   };
